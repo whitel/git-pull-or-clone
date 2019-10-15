@@ -3,8 +3,9 @@ module.exports = gitPullOrClone
 const crossSpawn = require('cross-spawn')
 const debug = require('debug')('git-pull-or-clone')
 const fs = require('fs')
+const path = require('path')
 
-function gitPullOrClone (url, outPath, opts, cb) {
+function gitPullOrClone(url, outPath, opts, cb) {
   if (typeof opts === 'function') {
     cb = opts
     opts = {}
@@ -20,11 +21,17 @@ function gitPullOrClone (url, outPath, opts, cb) {
     if (err) {
       gitClone()
     } else {
-      gitPull()
+      fs.access(outPath + path.sep + ".git", fs.R_OK | fs.W_OK, function (err) {
+        if (err) {
+          gitClone()
+        } else {
+          gitPull()
+        }
+      })
     }
   })
 
-  function gitClone () {
+  function gitClone() {
     // --depth implies --single-branch
     const flag = depth < Infinity ? '--depth=' + depth : '--single-branch'
     const args = ['clone', flag, url, outPath]
@@ -35,7 +42,7 @@ function gitPullOrClone (url, outPath, opts, cb) {
     })
   }
 
-  function gitPull () {
+  function gitPull() {
     const args = depth < Infinity ? ['pull', '--depth=' + depth] : ['pull']
     debug('git ' + args.join(' '))
     spawn('git', args, { cwd: outPath }, function (err) {
@@ -45,7 +52,7 @@ function gitPullOrClone (url, outPath, opts, cb) {
   }
 }
 
-function spawn (command, args, opts, cb) {
+function spawn(command, args, opts, cb) {
   opts.stdio = debug.enabled ? 'inherit' : 'ignore'
 
   const child = crossSpawn(command, args, opts)
